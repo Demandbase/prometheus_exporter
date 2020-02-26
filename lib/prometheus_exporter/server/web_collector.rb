@@ -29,10 +29,17 @@ module PrometheusExporter::Server
 
     protected
 
+    def add_metric_prefix(metric_name)
+      if @config["metric_prefix"]
+        metric_name = @config["metric_prefix"]+"_"+metric_name
+      end
+      metric_name
+    end
+
     def ensure_metrics
       unless @http_requests_total
         @metrics["http_requests_total"] = @http_requests_total = PrometheusExporter::Metric::Counter.new(
-          "http_requests_total",
+          add_metric_prefix("http_requests_total"),
           "Total HTTP requests from web app."
         )
 
@@ -43,32 +50,42 @@ module PrometheusExporter::Server
         # )
 
         @metrics["http_duration_seconds"] = @http_duration_seconds = PrometheusExporter::Metric::Histogram.new(
-          "http_duration_seconds",
+          add_metric_prefix("http_duration_seconds"),
           "Time spent in HTTP reqs in seconds.",
           opts={:buckets=>@config["histogram_buckets"]}
         )
 
         @metrics["http_redis_duration_seconds"] = @http_redis_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          "http_redis_duration_seconds",
+          add_metric_prefix("http_redis_duration_seconds"),
           "Time spent in HTTP reqs in Redis, in seconds."
         )
 
         @metrics["http_sql_duration_seconds"] = @http_sql_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          "http_sql_duration_seconds",
+          add_metric_prefix("http_sql_duration_seconds"),
           "Time spent in HTTP reqs in SQL in seconds."
         )
 
         @metrics["http_queue_duration_seconds"] = @http_queue_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          "http_queue_duration_seconds",
+          add_metric_prefix("http_queue_duration_seconds"),
           "Time spent queueing the request in load balancer in seconds."
         )
       end
     end
 
+    def replace_digits_in_controller(controller)
+      if controller
+        controller = controller.gsub(/\d+/, "digit")
+      end
+      controller
+    end
+
     def observe(obj)
+      obj['controller'] = replace_digits_in_controller(obj['controller'])
+
       default_labels = {
-        controller: obj['controller'] || 'other',
-        action: obj['action'] || 'other'
+        request_url: obj['controller'] || 'other',
+        action: obj['action'] || 'other',
+        status_code: obj["status"]
       }
       custom_labels = obj['custom_labels']
       labels = custom_labels.nil? ? default_labels : default_labels.merge(custom_labels)
