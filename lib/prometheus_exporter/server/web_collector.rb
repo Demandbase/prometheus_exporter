@@ -9,7 +9,7 @@ module PrometheusExporter::Server
         @config = YAML.load(File.read(ENV["RAIL_PROMETHEUS_EXPORTER_CONFIG"]))
       else
         puts("Could not find env RAIL_PROMETHEUS_EXPORTER_CONFIG. Loading defualt configuration.")
-        @config = {"histogram_buckets"=>[ 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 20.0, 30.0 ]}
+        @config = {"histogram_buckets"=>[ 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5.0, 7.5, 10, 20, 30 ]}
       end
       @metrics = {}
     end
@@ -29,17 +29,10 @@ module PrometheusExporter::Server
 
     protected
 
-    def add_metric_prefix(metric_name)
-      if @config["metric_prefix"]
-        metric_name = @config["metric_prefix"]+"_"+metric_name
-      end
-      metric_name
-    end
-
     def ensure_metrics
       unless @http_requests_total
         @metrics["http_requests_total"] = @http_requests_total = PrometheusExporter::Metric::Counter.new(
-          add_metric_prefix("http_requests_total"),
+          "http_requests_total",
           "Total HTTP requests from web app."
         )
 
@@ -50,23 +43,23 @@ module PrometheusExporter::Server
         # )
 
         @metrics["http_duration_seconds"] = @http_duration_seconds = PrometheusExporter::Metric::Histogram.new(
-          add_metric_prefix("http_duration_seconds"),
+          "http_duration_seconds",
           "Time spent in HTTP reqs in seconds.",
           opts={:buckets=>@config["histogram_buckets"]}
         )
 
         @metrics["http_redis_duration_seconds"] = @http_redis_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          add_metric_prefix("http_redis_duration_seconds"),
+          "http_redis_duration_seconds",
           "Time spent in HTTP reqs in Redis, in seconds."
         )
 
         @metrics["http_sql_duration_seconds"] = @http_sql_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          add_metric_prefix("http_sql_duration_seconds"),
+          "http_sql_duration_seconds",
           "Time spent in HTTP reqs in SQL in seconds."
         )
 
         @metrics["http_queue_duration_seconds"] = @http_queue_duration_seconds = PrometheusExporter::Metric::Summary.new(
-          add_metric_prefix("http_queue_duration_seconds"),
+          "http_queue_duration_seconds",
           "Time spent queueing the request in load balancer in seconds."
         )
       end
